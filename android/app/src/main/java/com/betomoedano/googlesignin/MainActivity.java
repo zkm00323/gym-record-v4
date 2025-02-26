@@ -1,4 +1,4 @@
-package com.betomoedano.googlesignin;
+package com.zkm00323.gymrecord;
 
 import android.os.Build;
 import android.os.Bundle;

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "google-sign-in",
-    "slug": "google-sign-in",
+    "name": "gym-record",
+    "slug": "gym-record",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,14 +14,14 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.betomoedano.googlesignin"
+      "bundleIdentifier": "com.zkm00323.gymrecord"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.betomoedano.googlesignin"
+      "package": "com.zkm00323.gymrecord"
     },
     "web": {
       "favicon": "./assets/favicon.png"

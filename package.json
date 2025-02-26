@@ -1,5 +1,5 @@
 {
-  "name": "google-sign-in",
+  "name": "gym-record",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start --dev-client",

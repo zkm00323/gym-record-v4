@@ -1,4 +1,4 @@
-package com.betomoedano.googlesignin;
+package com.zkm00323.gymrecord;
 
 import android.app.Application;
 import android.content.res.Configuration;

@@ -1,4 +1,4 @@
-rootProject.name = 'google-sign-in'
+rootProject.name = 'gym-record'
 
 apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle");
 useExpoModules()
