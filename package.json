@@ -8,18 +8,21 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~48.0.11",
-    "expo-status-bar": "~1.4.4",
-    "react": "18.2.0",
-    "react-native": "0.71.6",
-    "expo-auth-session": "~4.0.3",
-    "expo-crypto": "~12.2.1",
-    "expo-web-browser": "~12.1.1",
-    "react-native-web": "~0.18.10",
-    "react-dom": "18.2.0",
     "@expo/webpack-config": "^18.0.1",
     "@react-native-async-storage/async-storage": "1.17.11",
-    "expo-splash-screen": "~0.18.1"
+    "@rneui/themed": "^4.0.0-rc.8",
+    "@supabase/supabase-js": "^2.49.1",
+    "expo": "~48.0.21",
+    "expo-auth-session": "~4.0.3",
+    "expo-crypto": "~12.2.1",
+    "expo-splash-screen": "~0.18.2",
+    "expo-status-bar": "~1.4.4",
+    "expo-web-browser": "~12.1.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.71.14",
+    "react-native-url-polyfill": "^2.0.0",
+    "react-native-web": "~0.18.10"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
