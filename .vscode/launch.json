@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Expo Start",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npm start",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "run android",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx expo run:android",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+} 
