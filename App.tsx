@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Button, Image, TextInput } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ANDROID_CLIENT_ID, IOS_CLIENT_ID, WEB_CLIENT_ID } from '@env';
 
 import { supabase } from "./lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -24,13 +25,14 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [username, setUsername] = useState('')
+  const [website, setWebsite] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId:
-      "570378973190-schcrkn2alb21upu3ells058lpbh012l.apps.googleusercontent.com",
-    iosClientId:
-      "570378973190-qspi1d5vnvpqsk8ja9oq5q31q7po9lfi.apps.googleusercontent.com",
-    webClientId:
-      "570378973190-8dorfkieio33j0vfc61otpnthuevtnga.apps.googleusercontent.com",
+    androidClientId: '570378973190-rmuqd6rlr59escil3th8p9rvh8gm927l.apps.googleusercontent.com',
+    iosClientId: IOS_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
   });
 
   const [session, setSession] = useState<Session | null>(null);
@@ -49,6 +51,38 @@ export default function App() {
     onGoogleLogin();
   }, [response]);
 
+  useEffect(() => {
+    if (session) getProfile()
+  }, [session])
+
+  async function getProfile() {
+    try {
+      setLoading(true)
+      if (!session?.user) throw new Error('No user on the session!')
+
+      const { data, error, status } = await supabase
+        .from('profiles')
+        .select(`username, website, avatar_url`)
+        .eq('id', session?.user.id)
+        .single()
+      if (error && status !== 406) {
+        throw error
+      }
+
+      if (data) {
+        setUsername(data.username)
+        setWebsite(data.website)
+        setAvatarUrl(data.avatar_url)
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert(error.message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getLocalUser = async () => {
     const data = await AsyncStorage.getItem("@user");
     if (!data) return null;
@@ -57,21 +91,37 @@ export default function App() {
 
   async function onGoogleLogin() {
     const user = await getLocalUser();
-    console.log("user", user);
     if (!user) {
       if (response?.type === "success") {
-        const token = response?.authentication?.accessToken;
-        if (token) {
-          try {
-            const response = await fetch(
-              "https://www.googleapis.com/userinfo/v2/me",
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            const user = await response.json();
-            await AsyncStorage.setItem("@user", JSON.stringify(user));
-            setUserInfo(user);
-          } catch (error) { }
+        if (response.authentication?.idToken) {
+          const token = response.authentication.idToken;
+          console.log(">>>", response);
+
+
+          const { data, error } = await supabase.auth.signInWithIdToken({
+            'provider': 'google',
+            'token': token,
+          });
+          if (error) {
+            Alert.alert(error.message)
+            console.log("> >", error);
+          } else {
+            // setUserInfo(data.user)
+          }
         }
+
+        // const token = response?.authentication?.accessToken;
+        // if (token) {
+        //   try {
+        //     const response = await fetch(
+        //       "https://www.googleapis.com/userinfo/v2/me",
+        //       { headers: { Authorization: `Bearer ${token}` } }
+        //     );
+        //     const user = await response.json();
+        //     await AsyncStorage.setItem("@user", JSON.stringify(user));
+        //     setUserInfo(user);
+        //   } catch (error) { }
+        // }
       }
     } else {
       setUserInfo(user);
@@ -108,26 +158,11 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {!userInfo ? (
-        <Button
-          title="Sign in with Google"
-          disabled={!request}
-          onPress={() => {
-            promptAsync();
-          }}
-        />
-      ) : (
+      {session && session.user ? (
         <View style={styles.card}>
-          {userInfo?.picture && (
-            <Image source={{ uri: userInfo.picture }} style={styles.image} />
-          )}
-          <Text style={styles.text}>Email: {userInfo?.email}</Text>
-          <Text style={styles.text}>
-            Verified: {userInfo.verified_email ? "yes" : "no"}
-          </Text>
-          <Text style={styles.text}>Name: {userInfo.name}</Text>
+          <Text style={styles.text}>Email: {session?.user?.email}</Text>
         </View>
-      )}
+      ) : (<View />)}
 
       {!userInfo ? (
         <Button
@@ -152,6 +187,7 @@ export default function App() {
       <Button
         title="remove local store"
         onPress={async () => {
+          supabase.auth.signOut();
           await AsyncStorage.removeItem("@user");
           setUserInfo(null);
         }}
