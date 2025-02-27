@@ -10,6 +10,55 @@ import { ANDROID_CLIENT_ID, IOS_CLIENT_ID, WEB_CLIENT_ID } from '@env';
 
 WebBrowser.maybeCompleteAuthSession();
 
+export interface Profile {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+    email: string | null;
+}
+
+export function useProfile() {
+    const session = useSession();
+    const [profile, setProfile] = React.useState<Profile | null>(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        if (session?.user?.id) {
+            getProfile();
+        }
+    }, [session]);
+
+    async function getProfile() {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('profiles')
+                .select(`username, avatar_url`)
+                .eq('id', session?.user?.id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching profile:', error.message);
+                return;
+            }
+
+            if (data) {
+                setProfile({
+                    id: session?.user?.id || null,
+                    email: session?.user?.email || null,
+                    ...data
+                } as Profile);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return { profile, loading, getProfile };
+}
+
 export function useGoogleAuth() {
     const [request, response, promptAsync] = Google.useAuthRequest({
         androidClientId: ANDROID_CLIENT_ID,
