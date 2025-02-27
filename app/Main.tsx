@@ -2,19 +2,16 @@ import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native'
 import React, { useState } from 'react'
 import { styles } from './Styles';
 import { signOut, useProfile } from './helper/accountHelper';
-import { uploadProfileImage } from './helper/accountHelper';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
 const Main = () => {
-    const { profile, loading, getProfile, updateGender } = useProfile();
-    const [uploading, setUploading] = useState(false);
+    const { profile, loading, updateProfile, uploadAvatar } = useProfile();
 
     const handleImageUpload = async () => {
         if (!profile?.id) return;
 
         try {
-            setUploading(true);
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
@@ -24,24 +21,23 @@ const Main = () => {
             });
 
             if (!result.canceled && result.assets[0].base64) {
-                const uploadResult = await uploadProfileImage(profile.id, result.assets[0].base64);
+                const uploadResult = await uploadAvatar(result.assets[0].base64);
                 if (uploadResult.success) {
-                    await getProfile();
                     Alert.alert('成功', '頭像已更新');
                 }
             }
         } catch (error) {
             console.error('Error uploading avatar:', error);
             Alert.alert('錯誤', '上傳頭像時發生錯誤');
-        } finally {
-            setUploading(false);
         }
     };
 
     const handleGenderChange = async (gender: 'male' | 'female') => {
         try {
-            await updateGender(gender);
-            Alert.alert('成功', '性別已更新');
+            const success = await updateProfile({ gender });
+            if (success) {
+                Alert.alert('成功', '性別已更新');
+            }
         } catch (error) {
             Alert.alert('錯誤', '更新性別時發生錯誤');
         }
@@ -71,7 +67,7 @@ const Main = () => {
                             source={{ uri: profile?.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
                             style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 20 }}
                         />
-                        {uploading && <Text>上傳中...</Text>}
+                        {loading && <Text>上傳中...</Text>}
                         <Text style={{ textAlign: 'center', color: '#666' }}>點擊更換頭像</Text>
                     </TouchableOpacity>
                     <Text>{profile?.username || profile?.email}</Text>
