@@ -2,17 +2,19 @@ import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native'
 import React, { useState } from 'react'
 import { styles } from './Styles';
 import { signOut, useProfile } from './helper/accountHelper';
+import { uploadProfileImage } from './helper/accountHelper';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '../lib/supabase';
-import { decode } from 'base64-arraybuffer';
 import { Alert } from 'react-native';
 
 const Main = () => {
-    const { profile, loading, getProfile } = useProfile();
+    const { profile, loading, getProfile, updateGender } = useProfile();
     const [uploading, setUploading] = useState(false);
 
-    const pickImage = async () => {
+    const handleImageUpload = async () => {
+        if (!profile?.id) return;
+
         try {
+            setUploading(true);
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
@@ -22,52 +24,37 @@ const Main = () => {
             });
 
             if (!result.canceled && result.assets[0].base64) {
-                await uploadAvatar(result.assets[0].base64);
+                const uploadResult = await uploadProfileImage(profile.id, result.assets[0].base64);
+                if (uploadResult.success) {
+                    await getProfile();
+                    Alert.alert('成功', '頭像已更新');
+                }
             }
-        } catch (error) {
-            console.error('Error picking image:', error);
-            Alert.alert('錯誤', '選擇圖片時發生錯誤');
-        }
-    };
-
-    const uploadAvatar = async (base64File: string) => {
-        try {
-            setUploading(true);
-
-            const fileName = `${profile?.id}-${Date.now()}.jpg`;
-
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(fileName, decode(base64File), {
-                    contentType: 'image/jpeg',
-                    upsert: true
-                });
-
-            if (uploadError) {
-                throw uploadError;
-            }
-
-            const { data } = await supabase.storage
-                .from('avatars')
-                .getPublicUrl(uploadData.path);
-
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ avatar_url: data.publicUrl })
-                .eq('id', profile?.id);
-
-            if (updateError) {
-                throw updateError;
-            }
-
-            await getProfile();
-            Alert.alert('成功', '頭像已更新');
-
         } catch (error) {
             console.error('Error uploading avatar:', error);
             Alert.alert('錯誤', '上傳頭像時發生錯誤');
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleGenderChange = async (gender: 'male' | 'female') => {
+        try {
+            await updateGender(gender);
+            Alert.alert('成功', '性別已更新');
+        } catch (error) {
+            Alert.alert('錯誤', '更新性別時發生錯誤');
+        }
+    };
+
+    const getGenderText = (gender: 'male' | 'female' | null) => {
+        switch (gender) {
+            case 'male':
+                return '男性';
+            case 'female':
+                return '女性';
+            default:
+                return '未設定';
         }
     };
 
@@ -79,7 +66,7 @@ const Main = () => {
                 <Text>載入中...</Text>
             ) : (
                 <>
-                    <TouchableOpacity onPress={pickImage}>
+                    <TouchableOpacity onPress={handleImageUpload}>
                         <Image
                             source={{ uri: profile?.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
                             style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 20 }}
@@ -89,6 +76,32 @@ const Main = () => {
                     </TouchableOpacity>
                     <Text>{profile?.username || profile?.email}</Text>
                     <Text>{profile?.id}</Text>
+
+                    <View style={{ width: 200, marginVertical: 20 }}>
+                        <Text style={{ textAlign: 'center', marginBottom: 10, color: '#666' }}>
+                            目前性別：{getGenderText(profile?.gender)}
+                        </Text>
+                        <View style={{ gap: 10 }}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.login,
+                                    { backgroundColor: profile?.gender === 'male' ? '#4CAF50' : '#2196F3' }
+                                ]}
+                                onPress={() => handleGenderChange('male')}
+                            >
+                                <Text style={{ color: 'white' }}>設為男性</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.login,
+                                    { backgroundColor: profile?.gender === 'female' ? '#4CAF50' : '#2196F3' }
+                                ]}
+                                onPress={() => handleGenderChange('female')}
+                            >
+                                <Text style={{ color: 'white' }}>設為女性</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
 
                     <TouchableOpacity style={styles.login} onPress={() => signOut()}>
                         <Text style={{ color: 'white', fontSize: 16 }}>
