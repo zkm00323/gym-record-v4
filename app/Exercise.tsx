@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { Lang } from './helper/langHelper';
 
-// 身體部位列舉
-type BodyPart = 'chest' | 'legs' | 'back' | 'arms' | 'core' | 'shoulders' | 'unknow' | 'hips';
-
-// 肌肉部位列舉
-type MusclePart = 'up_chest' | 'mid_chest' | 'lower_chest' | null;
+// 身體部位和肌肉部位的類型定義
+type BodyPart = string;  // 改為動態類型
+type MusclePart = string | null;  // 改為動態類型
 
 interface Exercise {
     id: number;
@@ -16,54 +15,70 @@ interface Exercise {
     muscle_part: MusclePart;
 }
 
-const bodyPartMap: Record<BodyPart, string> = {
-    chest: '胸部',
-    legs: '腿部',
-    back: '背部',
-    arms: '手臂',
-    core: '核心',
-    shoulders: '肩部',
-    unknow: '未知',
-    hips: '臀部'
-};
-
-const musclePartMap: Record<Exclude<MusclePart, null>, string> = {
-    up_chest: '上胸',
-    mid_chest: '中胸',
-    lower_chest: '下胸'
-};
+interface EnumValues {
+    body_part: string[];
+    muscle_part: string[];
+}
 
 const Exercise = () => {
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [enumValues, setEnumValues] = useState<EnumValues>({
+        body_part: [],
+        muscle_part: []
+    });
+
+    // 獲取列舉值
+    const fetchEnumValues = async () => {
+        try {
+            const { data, error } = await supabase
+                .rpc('get_enum_values');
+
+            if (error) throw error;
+
+            if (data) {
+                setEnumValues(data);
+            }
+        } catch (error) {
+            console.error('獲取列舉值時發生錯誤:', error);
+        }
+    };
 
     useEffect(() => {
-        fetchExercises();
+        const initializeApp = async () => {
+            try {
+                await Lang.initialize();
+                await Promise.all([
+                    fetchEnumValues(),
+                    fetchExercises()
+                ]);
+            } catch (error) {
+                console.error('初始化時發生錯誤:', error);
+            }
+        };
+
+        initializeApp();
     }, []);
 
     const fetchExercises = async () => {
-        console.log('Component mounted');
         try {
             console.log('開始獲取運動資料...');
             setLoading(true);
+
             const { data, error } = await supabase
                 .from('exercise')
                 .select('*')
                 .order('created_at', { ascending: false });
-
-            console.log('Supabase 回應:', { data, error });
 
             if (error) {
                 throw error;
             }
 
             if (data) {
-                console.log('設置運動資料:', data);
                 setExercises(data);
             } else {
-                console.log('沒有獲取到資料');
                 setExercises([]);
             }
         } catch (error) {
@@ -75,18 +90,29 @@ const Exercise = () => {
         }
     };
 
-    const onRefresh = React.useCallback(() => {
+    const onRefresh = React.useCallback(async () => {
         setRefreshing(true);
-        fetchExercises();
+        try {
+            await Promise.all([
+                Lang.reloadTranslations(),
+                fetchExercises()
+            ]);
+        } catch (error) {
+            console.error('刷新時發生錯誤:', error);
+        } finally {
+            setRefreshing(false);
+        }
     }, []);
 
     const renderExerciseItem = ({ item }: { item: Exercise }) => (
         <View style={styles.exerciseItem}>
             <Text style={styles.exerciseName}>{item.name}</Text>
             <View style={styles.exerciseDetails}>
-                <Text style={styles.detailText}>部位：{bodyPartMap[item.body_part]}</Text>
                 <Text style={styles.detailText}>
-                    肌群：{item.muscle_part ? musclePartMap[item.muscle_part] : '未指定'}
+                    {Lang.getLang('exercise.body_part_label')}：{Lang.getLang(`body_part.${item.body_part}`)}
+                </Text>
+                <Text style={styles.detailText}>
+                    {Lang.getLang('exercise.muscle_part_label')}：{item.muscle_part ? Lang.getLang(`muscle_part.${item.muscle_part}`) : Lang.getLang('muscle_part.null')}
                 </Text>
             </View>
         </View>
@@ -111,13 +137,13 @@ const Exercise = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>運動列表</Text>
+                <Text style={styles.title}>{Lang.getLang('exercise.title')}</Text>
                 <TouchableOpacity
                     style={styles.refreshButton}
                     onPress={fetchExercises}
                     disabled={loading}
                 >
-                    <Text style={styles.refreshButtonText}>刷新</Text>
+                    <Text style={styles.refreshButtonText}>{Lang.getLang('exercise.refresh')}</Text>
                 </TouchableOpacity>
             </View>
             <FlatList
@@ -134,7 +160,7 @@ const Exercise = () => {
                 ListEmptyComponent={() => (
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>
-                            {loading ? '載入中...' : '沒有運動資料'}
+                            {loading ? Lang.getLang('exercise.loading') : Lang.getLang('exercise.no_data')}
                         </Text>
                     </View>
                 )}
